@@ -1,0 +1,40 @@
+version: "3.8"
+
+services:
+  gluetun:
+    image: qmcgaw/gluetun
+    container_name: gluetun
+    restart: unless-stopped
+    cap_add:
+      - NET_ADMIN
+    devices:
+      - /dev/net/tun:/dev/net/tun
+    volumes:
+      - ./gluetun:/gluetun
+      - ./openvpn/<YOUR OVPN FILE>:/gluetun/custom.ovpn:ro
+    environment:
+      - VPN_SERVICE_PROVIDER=nordvpn
+      - OPENVPN_USER=<YOUR USER>
+      - OPENVPN_PASSWORD=<YOUR PASSWORD>
+      - OPENVPN_CUSTOM_CONFIG=/gluetun/custom.ovpn
+      - OPENVPN_PROTOCOL=tcp
+      - TZ=America/Chicago
+    networks:
+      local_net:
+        ipv4_address: 192.168.1.10
+
+  socks5-proxy:
+    image: serjs/go-socks5-proxy
+    container_name: socks5-proxy
+    depends_on:
+      - gluetun
+    # Share the Gluetun network namespace:
+    network_mode: "service:gluetun"
+    environment:
+      - USERNAME=proxy-user
+      - PASSWORD=pproxy-pass
+    restart: unless-stopped
+
+networks:
+  local_net:
+    external: true
